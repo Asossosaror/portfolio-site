@@ -355,19 +355,29 @@
     outer: for (let s = 1; s >= 0.44; s -= 0.02) {
       const w = CARD_W * s + BOB_AMP;
       const h = CARD_H * s + BOB_AMP * 2;
-      const rxO = W / 2 - margin - w / 2;
-      const ryO = H / 2 - margin - h / 2;
-      if (rxO <= 0 || ryO <= 0) continue;
-      for (const c of configs) {
-        const rings = c.split.map((count, i) => ({
-          count,
-          rx: rxO * c.kx[i],
-          ry: ryO * c.ky[i],
-          off: (c.off[i] * TAU) / count,
-        }));
-        if (fits(rings, w, h)) {
-          best = { scale: s, rings };
-          break outer;
+      const rxMax = W / 2 - margin - w / 2;
+      const ryMax = H / 2 - margin - h / 2;
+      if (rxMax <= 0 || ryMax <= 0) continue;
+      // Preferred ("tight") ring: just big enough for n cards plus some air, so a
+      // few cards gather round the orb instead of hugging the screen edges.
+      const rxTight = Math.max(orbR + w / 2 + W * 0.12, (n * (w + 70) * 1.25) / TAU);
+      const ryTight = Math.max(rxTight * 0.6, orbR + h / 2 + H * 0.07);
+      // Step from the tight ring out to the full viewport; keep the first that fits.
+      const rxT = Math.min(rxMax, rxTight);
+      const ryT = Math.min(ryMax, ryTight);
+      const sizes = [0, 0.2, 0.4, 0.6, 0.8, 1].map((f) => [lerp(rxT, rxMax, f), lerp(ryT, ryMax, f)]);
+      for (const [rxO, ryO] of sizes) {
+        for (const c of configs) {
+          const rings = c.split.map((count, i) => ({
+            count,
+            rx: rxO * c.kx[i],
+            ry: ryO * c.ky[i],
+            off: (c.off[i] * TAU) / count,
+          }));
+          if (fits(rings, w, h)) {
+            best = { scale: s, rings };
+            break outer;
+          }
         }
       }
     }
